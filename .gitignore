@@ -1,0 +1,7 @@
+logs/
+nginx-passwords/
+tunnels/
+*.pyc
+__pycache__/
+.env
+data/

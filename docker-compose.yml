@@ -1,0 +1,93 @@
+networks:
+  traefik-network:
+    external: true
+
+services:
+  file-sharer:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    container_name: file-sharer
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me}
+      - MAX_TUNNEL_SECONDS=${MAX_TUNNEL_SECONDS:-3600}
+      - STALL_TIMEOUT_SECONDS=${STALL_TIMEOUT_SECONDS:-300}
+      - GRACE_PERIOD_SECONDS=${GRACE_PERIOD_SECONDS:-3600}
+      - NAS_MOUNT_PATH=/data
+    volumes:
+      - /path/to/your/data:/data:ro
+      - ./logs:/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./web:/app/web
+      - ./tunnels:/tunnels  # Mount tunnels directory for symlink management
+    depends_on:
+      - redis
+      - nginx
+    labels:
+      - "traefik.enable=true"
+      # --- IMPORTANT ---
+      # Change the Host rule to your desired domain
+      - "traefik.http.routers.filesharer-http.rule=Host(`domain.com`)"
+      - "traefik.http.routers.filesharer-http.entrypoints=web"
+      - "traefik.http.routers.filesharer-https.rule=Host(`domain.com`)"
+      - "traefik.http.routers.filesharer-https.entrypoints=websecure"
+      - "traefik.http.routers.filesharer-https.tls=true"
+      - "traefik.http.services.filesharer.loadbalancer.server.port=8000"
+      # --- IMPORTANT ---
+      # This assumes your traefik network is named 'traefik-network'. Change if needed.
+      - "traefik.docker.network=traefik-network"
+    networks:
+      - traefik-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: file-server
+    restart: unless-stopped
+    volumes:
+      - /path/to/your/data:/data:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./logs:/var/log/nginx
+      - ./tunnels:/tunnels  # Mount tunnels directory for symlinks
+      - /dev/null:/etc/nginx/conf.d/default.conf  # Override default config
+    expose:
+      - "80"  # Only expose within Docker network
+    networks:
+      - traefik-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis-state
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - traefik-network
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-tunnel
+    restart: unless-stopped
+    # Share network namespace with nginx to expose the funnel.
+    # Nginx itself is on the 'traefik-network', and tailscale joins it.
+    network_mode: "service:nginx"
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/var/lib/tailscale/serve.json
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+
+volumes:
+  redis-data:
+  tailscale-data:

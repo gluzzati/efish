@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ephemeral File Sharing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .file-item {
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .file-item:hover {
+            background: #f5f5f5;
+        }
+
+        .file-item.selected {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .tunnel-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .tunnel-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .tunnel-id {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .tunnel-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-completed {
+            background: #cce7ff;
+            color: #004085;
+        }
+
+        .status-destroyed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .copy-btn {
+            margin-left: 10px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Ephemeral File Sharing</h1>
+            <p>Secure, temporary file sharing with automatic cleanup</p>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('generate')">Generate Link</button>
+                <button class="tab" onclick="switchTab('tunnels')">Active Tunnels</button>
+                <button class="tab" onclick="switchTab('admin')">System Status</button>
+            </div>
+
+            <!-- Generate Link Tab -->
+            <div id="generate-tab" class="tab-content active">
+                <h3>Create Public Download Link</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Select a file and create a secure public HTTPS tunnel. The link will show a courtesy page with download option.
+                </p>
+                <div id="generate-alert"></div>
+                
+                <div class="form-group">
+                    <label>Available Files:</label>
+                    <div id="file-list" class="file-list">
+                        <div class="loading">Loading files...</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="file-path">Selected File:</label>
+                    <input type="text" id="file-path" placeholder="Select a file from the list above" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="expires-in">Expires In:</label>
+                    <select id="expires-in">
+                        <option value="300">5 minutes</option>
+                        <option value="900">15 minutes</option>
+                        <option value="1800">30 minutes</option>
+                        <option value="3600" selected>1 hour</option>
+                        <option value="7200">2 hours</option>
+                        <option value="21600">6 hours</option>
+                        <option value="43200">12 hours</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="generateLink()">🚀 Create Public Download Link</button>
+
+                <div id="link-result" style="display: none; margin-top: 20px;">
+                    <div class="form-group">
+                        <label>🌐 Public Download URL (Ready to Share):</label>
+                        <div style="display: flex; align-items: center;">
+                            <input type="text" id="download-url" readonly style="flex: 1;">
+                            <button class="btn btn-small copy-btn" onclick="copyToClipboard('download-url')">Copy</button>
+                        </div>
+                        <small style="color: #666; margin-top: 5px; display: block;">
+                            ✅ This shows a courtesy page with download option
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Tunnels Tab -->
+            <div id="tunnels-tab" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>Active Tunnels</h3>
+                    <button class="btn btn-small" onclick="refreshTunnels()">Refresh</button>
+                </div>
+                <div id="tunnels-list">
+                    <div class="loading">Loading tunnels...</div>
+                </div>
+            </div>
+
+            <!-- System Status Tab -->
+            <div id="admin-tab" class="tab-content">
+                <h3>System Status</h3>
+                <div id="system-stats" class="stats-grid">
+                    <div class="loading">Loading system status...</div>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <h4>System Actions</h4>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-danger" onclick="forceCleanup()">Force Cleanup</button>
+                        <button class="btn" onclick="refreshSystemStatus()" style="margin-left: 10px;">Refresh Status</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.protocol + '//' + window.location.hostname;
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load data for the selected tab
+            if (tabName === 'generate') {
+                loadFiles();
+            } else if (tabName === 'tunnels') {
+                loadTunnels();
+            } else if (tabName === 'admin') {
+                loadSystemStatus();
+            }
+        }
+
+        // Load available files
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const files = await response.json();
+                
+                const fileList = document.getElementById('file-list');
+                if (files.length === 0) {
+                    fileList.innerHTML = '<div style="text-align: center; color: #666;">No files available</div>';
+                } else {
+                    fileList.innerHTML = files.map(file => 
+                        `<div class="file-item" onclick="selectFile('${file}')">${file}</div>`
+                    ).join('');
+                }
+            } catch (error) {
+                document.getElementById('file-list').innerHTML = 
+                    '<div style="text-align: center; color: #ff6b6b;">Error loading files</div>';
+                console.error('Error loading files:', error);
+            }
+        }
+
+        // Select a file
+        function selectFile(filename) {
+            // Remove previous selection
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.target.classList.add('selected');
+            
+            // Update input field
+            document.getElementById('file-path').value = filename;
+        }
+
+        // Generate download link and create tunnel
+        async function generateLink() {
+            const filePath = document.getElementById('file-path').value;
+            const expiresIn = document.getElementById('expires-in').value;
+            
+            if (!filePath) {
+                showAlert('generate-alert', 'Please select a file', 'error');
+                return;
+            }
+
+            // Disable button and show loading state
+            const generateBtn = event.target;
+            const originalText = generateBtn.textContent;
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Creating tunnel...';
+
+            try {
+                // Generate the tunnel
+                showAlert('generate-alert', 'Creating tunnel...', 'success');
+                console.log('fetching url', `${API_BASE}/generate-link`);
+                
+                const response = await fetch(`${API_BASE}/generate-link`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_path: filePath,
+                        expires_in_seconds: parseInt(expiresIn)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to create tunnel: HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // Display the public tunnel URL (which shows courtesy page by default)
+                document.getElementById('download-url').value = result.download_url;
+                document.getElementById('link-result').style.display = 'block';
+                
+                showAlert('generate-alert', 
+                    `🎉 Tunnel created successfully! Public URL is ready for sharing.`, 
+                    'success');
+                
+                // Auto-refresh tunnels tab if it's visible
+                if (document.getElementById('tunnels-tab').classList.contains('active')) {
+                    loadTunnels();
+                }
+                
+            } catch (error) {
+                showAlert('generate-alert', 'Error: ' + error.message, 'error');
+                console.error('Error creating tunnel:', error);
+                document.getElementById('link-result').style.display = 'none';
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.textContent = originalText;
+            }
+        }
+
+        // Load active tunnels
+        async function loadTunnels() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/tunnels`);
+                const data = await response.json();
+                
+                const tunnelsList = document.getElementById('tunnels-list');
+                if (data.active_tunnels.length === 0) {
+                    tunnelsList.innerHTML = '<div style="text-align: center; color: #666;">No active tunnels</div>';
+                } else {
+                    tunnelsList.innerHTML = data.active_tunnels.map(tunnel => 
+                        createTunnelCard(tunnel)
+                    ).join('');
+                }
+            } catch (error) {
+                document.getElementById('tunnels-list').innerHTML = 
+                    '<div style="text-align: center; color: #ff6b6b;">Error loading tunnels</div>';
+                console.error('Error loading tunnels:', error);
+            }
+        }
+
+        // Create tunnel card HTML
+        function createTunnelCard(tunnel) {
+            const progress = tunnel.download_stats ? 
+                (tunnel.download_stats.bytes_served / (tunnel.file_size || 1)) * 100 : 0;
+            
+            const statusClass = tunnel.status === 'active' ? 'status-active' : 
+                               tunnel.status === 'completed' ? 'status-completed' : 'status-destroyed';
+
+            // Calculate time remaining for TUNNEL (not token) expiration
+            let expirationInfo = '';
+            if (tunnel.expires_at) {
+                // Parse as UTC since server returns UTC timestamps
+                const expiresAt = new Date(tunnel.expires_at + 'Z');
+                const now = new Date();
+                const timeRemaining = expiresAt - now;
+                
+                if (timeRemaining > 0) {
+                    const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+                    
+                    let timeStr = '';
+                    if (hours > 0) timeStr += `${hours}h `;
+                    if (minutes > 0) timeStr += `${minutes}m `;
+                    if (hours === 0) timeStr += `${seconds}s`;
+                    
+                    expirationInfo = `
+                        <div><strong>Tunnel expires:</strong> ${expiresAt.toLocaleString()}</div>
+                        <div style="color: ${timeRemaining < 300000 ? '#ff6b6b' : '#666'};">
+                            <strong>Time remaining:</strong> ${timeStr.trim()}
+                        </div>
+                    `;
+                } else {
+                    expirationInfo = '<div style="color: #ff6b6b;"><strong>Tunnel Status:</strong> Expired</div>';
+                }
+            }
+
+            return `
+                <div class="tunnel-card">
+                    <div class="tunnel-header">
+                        <div>
+                            <span class="tunnel-id">${tunnel.tunnel_id}</span>
+                            <span class="tunnel-status ${statusClass}">${tunnel.status}</span>
+                        </div>
+                        <button class="btn btn-danger btn-small" onclick="terminateTunnel('${tunnel.tunnel_id}')">
+                            Terminate
+                        </button>
+                    </div>
+                    <div><strong>File:</strong> ${tunnel.file_path}</div>
+                    <div><strong>Created:</strong> ${new Date(tunnel.created_at).toLocaleString()}</div>
+                    ${expirationInfo}
+                    <div><strong>Public URL:</strong> 
+                        <a href="${tunnel.public_url}" target="_blank" style="word-break: break-all;">
+                            ${tunnel.public_url}
+                        </a>
+                    </div>
+                    ${tunnel.download_stats ? `
+                        <div><strong>Progress:</strong> ${tunnel.download_stats.bytes_served || 0} / ${tunnel.file_size || 'unknown'} bytes</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${Math.min(progress, 100)}%"></div>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666;">
+                            ${Math.round(progress)}% complete
+                            ${tunnel.download_stats.active_connections > 0 ? `• ${tunnel.download_stats.active_connections} active connections` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Terminate tunnel
+        async function terminateTunnel(tunnelId) {
+            if (!confirm('Are you sure you want to terminate this tunnel?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/tunnels/${tunnelId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadTunnels(); // Refresh the list
+                } else {
+                    alert('Error terminating tunnel');
+                }
+            } catch (error) {
+                alert('Error terminating tunnel: ' + error.message);
+                console.error('Error terminating tunnel:', error);
+            }
+        }
+
+        // Load system status
+        async function loadSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/monitor/status`);
+                const status = await response.json();
+                
+                const statsGrid = document.getElementById('system-stats');
+                statsGrid.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${status.active_tunnels_count}</div>
+                        <div class="stat-label">Active Tunnels</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${status.active_downloads}</div>
+                        <div class="stat-label">Active Downloads</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${status.redis_connected ? 'OK' : 'ERROR'}</div>
+                        <div class="stat-label">Redis Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${status.redis_memory_usage || 'N/A'}</div>
+                        <div class="stat-label">Memory Usage</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${Math.round(status.uptime / 3600)}h</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${status.monitor_active ? 'ON' : 'OFF'}</div>
+                        <div class="stat-label">Monitor</div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('system-stats').innerHTML = 
+                    '<div style="text-align: center; color: #ff6b6b;">Error loading system status</div>';
+                console.error('Error loading system status:', error);
+            }
+        }
+
+        // Force cleanup
+        async function forceCleanup() {
+            if (!confirm('Are you sure you want to force cleanup of expired tunnels and tokens?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cleanup`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    alert('Cleanup completed successfully');
+                    loadSystemStatus();
+                    loadTunnels();
+                } else {
+                    alert('Error during cleanup');
+                }
+            } catch (error) {
+                alert('Error during cleanup: ' + error.message);
+                console.error('Error during cleanup:', error);
+            }
+        }
+
+        // Refresh functions
+        function refreshTunnels() {
+            loadTunnels();
+        }
+
+        function refreshSystemStatus() {
+            loadSystemStatus();
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }
+
+        // Show alert messages
+        function showAlert(containerId, message, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFiles();
+            
+            // Auto-refresh tunnels every 30 seconds when on tunnels tab
+            setInterval(() => {
+                if (document.getElementById('tunnels-tab').classList.contains('active')) {
+                    loadTunnels();
+                }
+            }, 30000);
+            
+            // Auto-refresh system status every 60 seconds when on admin tab
+            setInterval(() => {
+                if (document.getElementById('admin-tab').classList.contains('active')) {
+                    loadSystemStatus();
+                }
+            }, 60000);
+        });
+    </script>
+</body>
+</html> 

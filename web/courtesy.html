@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Download Ready</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .file-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+
+        .file-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .countdown {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📄</div>
+        <h1>Your File is Ready to Download</h1>
+        
+        <div class="file-info">
+            <div class="file-name" id="file-name">{{FILE_NAME}}</div>
+            <div class="file-meta">Created: <span id="created-time">{{CREATED_TIME}}</span></div>
+            <div class="file-meta">Expires: <span id="expires-time">{{EXPIRES_TIME}}</span></div>
+            <div class="countdown" id="countdown"></div>
+        </div>
+
+        <div class="warning">
+            ⚠️ This is a secure, time-limited download link. Click the button below to start your download.
+        </div>
+
+        <button class="download-btn" id="download-btn" onclick="startDownload()">
+            🔗 Create Download Tunnel
+        </button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Creating secure tunnel...</p>
+        </div>
+
+        <div class="footer">
+            Secure ephemeral file sharing
+        </div>
+    </div>
+
+    <script>
+        const token = '{{TOKEN}}';
+        const expiresAt = new Date('{{EXPIRES_AT_ISO}}');
+        const requestedExpiresAt = new Date('{{REQUESTED_EXPIRES_AT_ISO}}');
+        
+        function updateCountdown() {
+            const now = new Date();
+            const timeRemaining = requestedExpiresAt - now; // Use requested expiration for display
+            
+            if (timeRemaining <= 0) {
+                document.getElementById('countdown').textContent = 'Link has expired';
+                document.getElementById('download-btn').disabled = true;
+                return;
+            }
+            
+            const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+            
+            let timeStr = '';
+            if (hours > 0) timeStr += `${hours}h `;
+            if (minutes > 0) timeStr += `${minutes}m `;
+            if (hours === 0) timeStr += `${seconds}s`;
+            
+            document.getElementById('countdown').textContent = `Time remaining: ${timeStr.trim()}`;
+        }
+
+        async function startDownload() {
+            const downloadBtn = document.getElementById('download-btn');
+            const loading = document.getElementById('loading');
+            
+            downloadBtn.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/download/${token}`, {
+                    method: 'GET'
+                });
+                
+                if (response.status === 444 || !response.ok) {
+                    throw new Error('Link has expired or is no longer valid');
+                }
+                
+                const result = await response.json();
+                
+                // Redirect to the public download URL
+                window.location.href = result.public_url;
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                downloadBtn.style.display = 'inline-block';
+                downloadBtn.textContent = '❌ Link Expired';
+                downloadBtn.disabled = true;
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Update countdown every second
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html> 
