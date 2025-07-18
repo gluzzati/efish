@@ -1,6 +1,12 @@
 # Ephemeral File Sharing System
 
-A secure, temporary file sharing system that creates public HTTPS tunnels for file downloads without exposing your network infrastructure. Files are shared through time-limited, single-use links that automatically clean up after download completion or timeout.
+![WhatsApp Image 2025-07-18 at 13 24 50_5a3e5225](https://github.com/user-attachments/assets/3e1a4992-2a38-4f86-a8a1-1356c0635da9)
+
+## Why
+
+Public share files on your local, private network, with secure, ephemeral public links.
+Files are shared through time-limited, single-use links that automatically clean up after download completion or timeout.
+
 
 ## 🚀 Features
 
