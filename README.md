@@ -135,7 +135,7 @@ Send the `download_url` from the web UI or API response to your recipient. The l
 ### 4. File Download
 The recipient downloads the file directly from the secure Tailscale Funnel URL. The system monitors the download and automatically destroys the tunnel upon completion, timeout, or stall.
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
