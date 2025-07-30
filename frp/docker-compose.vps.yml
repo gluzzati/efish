@@ -10,7 +10,7 @@ services:
     volumes:
       - ./frps.ini:/etc/frp/frps.ini:ro
       - ./logs:/var/log
-    command: ["frps", "-c", "/etc/frp/frps.ini"]
+    command: ["-c", "/etc/frp/frps.ini"]
     networks:
       - frp-network
 
