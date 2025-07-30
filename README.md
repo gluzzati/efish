@@ -8,7 +8,7 @@ Public share files on your local, private network, with secure, ephemeral public
 Files are shared through time-limited, single-use links that automatically clean up after download completion or timeout.
 
 
-## 🚀 Features
+## Features
 
 - **Public Internet Access**: Files accessible via HTTPS from anywhere, no VPN required
 - **Ephemeral Tunnels**: Temporary Tailscale Funnel endpoints that auto-destroy
@@ -18,7 +18,7 @@ Files are shared through time-limited, single-use links that automatically clean
 - **Admin Dashboard**: Monitor active tunnels, view history, manual controls
 - **Security**: Path validation, token expiration, no persistent exposure
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Docker & Docker Compose** - Container orchestration
 - **Tailscale Account** - For secure tunnel creation ([tailscale.com](https://tailscale.com))
@@ -35,7 +35,7 @@ Files are shared through time-limited, single-use links that automatically clean
    - Create new auth key with "Ephemeral" and "Preauthorized" enabled
    - Copy the `tskey-auth-...` key
 
-## 🛠 Installation
+## Installation
 
 1. **Clone/Download** the filesharing directory
 2. **Configure Environment**:
@@ -76,7 +76,7 @@ Files are shared through time-limited, single-use links that automatically clean
    curl http://your-domain.com/health
    ```
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 filesharing/
@@ -96,7 +96,7 @@ filesharing/
 └── logs/                 # Application & access logs
 ```
 
-## 🔄 Usage Workflow
+## Usage Workflow
 
 This system provides a web interface for easy link generation and an API for automation.
 
@@ -135,7 +135,7 @@ Send the `download_url` from the web UI or API response to your recipient. The l
 ### 4. File Download
 The recipient downloads the file directly from the secure Tailscale Funnel URL. The system monitors the download and automatically destroys the tunnel upon completion, timeout, or stall.
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -168,7 +168,7 @@ services:
       - /path/to/your/data:/data:ro
 ```
 
-## 📊 Admin API
+## Admin API
 
 The Admin API provides endpoints for monitoring and managing the system.
 
@@ -207,7 +207,7 @@ curl -X DELETE https://your-domain.com/admin/tunnels/tunnel123
 curl https://your-domain.com/admin/history
 ```
 
-## 🏗 Architecture
+## Architecture
 
 ### Components
 

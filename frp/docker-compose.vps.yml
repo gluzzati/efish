@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  frps:
+    build:
+      context: .
+      dockerfile: Dockerfile.frps
+    container_name: frps-server
+    restart: unless-stopped
+    ports:
+      - "7000:7000"  # FRP server port
+      - "7001:7001"  # FRP UDP port
+      - "7500:7500"  # FRP dashboard port
+    volumes:
+      - ./logs:/var/log
+    environment:
+      - FRP_TOKEN=${FRP_TOKEN:-your_frp_token_here}
+    networks:
+      - frp-network
+
+networks:
+  frp-network:
+    driver: bridge 

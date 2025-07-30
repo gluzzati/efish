@@ -1,0 +1,13 @@
+FROM snowdreamtech/frps:latest
+
+# Copy FRP server configuration
+COPY frps.ini /etc/frp/frps.ini
+
+# Create log directory
+RUN mkdir -p /var/log
+
+# Expose ports
+EXPOSE 7000 7001 7500
+
+# Start FRP server
+CMD ["frps", "-c", "/etc/frp/frps.ini"] 

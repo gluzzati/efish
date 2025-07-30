@@ -16,12 +16,20 @@ services:
       - STALL_TIMEOUT_SECONDS=${STALL_TIMEOUT_SECONDS:-300}
       - GRACE_PERIOD_SECONDS=${GRACE_PERIOD_SECONDS:-3600}
       - NAS_MOUNT_PATH=/data
+      - FRP_SERVER_ADDR=${FRP_SERVER_ADDR:-your_vps_ip_here}
+      - FRP_SERVER_PORT=${FRP_SERVER_PORT:-7000}
+      - FRP_TOKEN=${FRP_TOKEN:-your_frp_token_here}
+      - DYNAMIC_PORT_SECRET=${DYNAMIC_PORT_SECRET:-your_shared_secret_here}
+      - DYNAMIC_BASE_PORT=${DYNAMIC_BASE_PORT:-30000}
+      - DYNAMIC_PORT_RANGE=${DYNAMIC_PORT_RANGE:-1000}
+      - DYNAMIC_PORT_INTERVAL=${DYNAMIC_PORT_INTERVAL:-300}
     volumes:
       - /path/to/your/data:/data:ro
       - ./logs:/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - ./web:/app/web
       - ./tunnels:/tunnels  # Mount tunnels directory for symlink management
+      - ./frp:/frp  # Mount FRP configuration directory
     depends_on:
       - redis
       - nginx
@@ -67,27 +75,37 @@ services:
     networks:
       - traefik-network
 
-  tailscale:
-    image: tailscale/tailscale:latest
-    container_name: tailscale-tunnel
+  # FRP Client (Homelab side)
+  frpc:
+    image: snowdreamtech/frpc:latest
+    container_name: frpc-client
     restart: unless-stopped
-    # Share network namespace with nginx to expose the funnel.
-    # Nginx itself is on the 'traefik-network', and tailscale joins it.
+    # Share network namespace with nginx to access the file server
     network_mode: "service:nginx"
     environment:
-      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_SERVE_CONFIG=/var/lib/tailscale/serve.json
+      - FRP_SERVER_ADDR=${FRP_SERVER_ADDR:-your_vps_ip_here}
+      - FRP_SERVER_PORT=${FRP_SERVER_PORT:-7000}
+      - FRP_TOKEN=${FRP_TOKEN:-your_frp_token_here}
     volumes:
-      - tailscale-data:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv6.conf.all.forwarding=1
+      - ./frp:/etc/frp
+      - ./logs:/var/log
+    command: ["frpc", "-c", "/etc/frp/frpc.ini"]
+    depends_on:
+      - nginx
+
+  # FRP Server (VPS side) - Uncomment and configure for VPS deployment
+  # frps:
+  #   image: snowdreamtech/frps:latest
+  #   container_name: frps-server
+  #   restart: unless-stopped
+  #   ports:
+  #     - "7000:7000"  # FRP server port
+  #     - "7001:7001"  # FRP UDP port
+  #     - "7500:7500"  # FRP dashboard port
+  #   volumes:
+  #     - ./frp/frps.ini:/etc/frp/frps.ini:ro
+  #     - ./logs:/var/log
+  #   command: ["frps", "-c", "/etc/frp/frps.ini"]
 
 volumes:
   redis-data:
-  tailscale-data:

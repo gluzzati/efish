@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Ephemeral File Sharing",
-    description="Secure, temporary file sharing with tailscale tunnels",
+    description="Secure, temporary file sharing with FRP tunnels",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -308,7 +308,56 @@ async def terminate_tunnel(tunnel_id: str):
         raise HTTPException(status_code=500, detail="Failed to terminate tunnel")
 
 # Removed internal validation endpoint - nginx now serves files directly
-# Security is handled by tunnel creation validation and Tailscale Funnel routing
+# Security is handled by tunnel creation validation and FRP tunnel routing
+
+@app.get("/admin/frp/status")
+async def get_frp_status():
+    """Get FRP tunnel status and configuration"""
+    try:
+        if not tunnel_manager:
+            raise HTTPException(status_code=500, detail="Tunnel manager not initialized")
+        
+        frp_status = tunnel_manager.get_frp_status()
+        
+        return {
+            "frp_status": frp_status,
+            "configuration": {
+                "server_addr": tunnel_manager.frp_server_addr,
+                "server_port": tunnel_manager.frp_server_port,
+                "base_port": tunnel_manager.base_port,
+                "port_range": tunnel_manager.port_range,
+                "port_interval": tunnel_manager.port_interval,
+                "current_port": tunnel_manager.current_port
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting FRP status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get FRP status")
+
+@app.post("/admin/frp/restart")
+async def restart_frp_tunnel():
+    """Restart FRP tunnel (useful for port changes)"""
+    try:
+        if not tunnel_manager:
+            raise HTTPException(status_code=500, detail="Tunnel manager not initialized")
+        
+        success = tunnel_manager.restart_frp_tunnel()
+        
+        if success:
+            return {
+                "message": "FRP tunnel restarted successfully",
+                "new_port": tunnel_manager.current_port
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to restart FRP tunnel")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error restarting FRP tunnel: {e}")
+        raise HTTPException(status_code=500, detail="Failed to restart FRP tunnel")
 
 @app.get("/admin/tunnels/{tunnel_id}/stats")
 async def get_tunnel_stats(tunnel_id: str):
@@ -368,7 +417,7 @@ async def get_monitor_status():
             "monitor_active": download_monitor is not None,
             "active_downloads": active_downloads,
             "active_tunnels_count": len(active_tunnels),
-            "funnel_active": tunnel_manager.is_funnel_active() if tunnel_manager else False,
+            "frp_status": tunnel_manager.get_frp_status() if tunnel_manager else {},
             "stall_timeout_seconds": download_monitor.stall_timeout if download_monitor else None,
             "max_tunnel_seconds": download_monitor.max_tunnel_seconds if download_monitor else None,
             "redis_connected": redis_client.ping() if redis_client else False,
