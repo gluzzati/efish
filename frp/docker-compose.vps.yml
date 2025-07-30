@@ -8,9 +8,9 @@ services:
     container_name: frps-server
     restart: unless-stopped
     ports:
-      - "7000:7000"  # FRP server port
-      - "7001:7001"  # FRP UDP port
-      - "7500:7500"  # FRP dashboard port
+      - "45413:45413"  # FRP server port
+      - "45414:45414"  # FRP UDP port
+      - "45415:45415"  # FRP dashboard port
     volumes:
       - ./logs:/var/log
     environment:

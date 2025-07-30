@@ -28,7 +28,7 @@ This directory contains the configuration for the FRP (Fast Reverse Proxy) tunne
    docker-compose -f docker-compose.vps.yml up -d
    ```
 
-4. Configure firewall to allow ports 7000, 7001, and 7500
+4. Configure firewall to allow ports 45413, 45414, and 45415
 
 ### 2. Homelab Setup (Client Side)
 
@@ -64,7 +64,7 @@ The system uses TOTP-like calculation to determine the current port:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FRP_SERVER_ADDR` | VPS IP address | `your_vps_ip_here` |
-| `FRP_SERVER_PORT` | FRP server port | `7000` |
+| `FRP_SERVER_PORT` | FRP server port | `45413` |
 | `FRP_TOKEN` | Authentication token | `your_frp_token_here` |
 | `DYNAMIC_PORT_SECRET` | Secret for port calculation | `your_shared_secret_here` |
 | `DYNAMIC_BASE_PORT` | Starting port number | `30000` |
@@ -73,7 +73,7 @@ The system uses TOTP-like calculation to determine the current port:
 
 ## Monitoring
 
-- **FRP Dashboard**: Access at `http://your_vps_ip:7500`
+- **FRP Dashboard**: Access at `http://your_vps_ip:45415`
 - **Logs**: Check `/logs/frpc.log` and `/logs/frps.log`
 - **Status API**: Use the FastAPI endpoints to check tunnel status
 
@@ -104,7 +104,7 @@ docker logs frpc-client
 docker logs frps-server
 
 # Test port connectivity
-telnet your_vps_ip current_dynamic_port
+telnet your_vps_ip 45413
 
 # Check tunnel status via API
 curl http://localhost:8000/api/tunnels/status
