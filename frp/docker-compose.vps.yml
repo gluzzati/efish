@@ -1,10 +1,6 @@
-version: '3.8'
-
 services:
   frps:
-    build:
-      context: .
-      dockerfile: Dockerfile.frps
+    image: snowdreamtech/frps:latest
     container_name: frps-server
     restart: unless-stopped
     ports:
@@ -12,9 +8,9 @@ services:
       - "45414:45414"  # FRP UDP port
       - "45415:45415"  # FRP dashboard port
     volumes:
+      - ./frps.ini:/etc/frp/frps.ini:ro
       - ./logs:/var/log
-    environment:
-      - FRP_TOKEN=${FRP_TOKEN:-your_frp_token_here}
+    command: ["frps", "-c", "/etc/frp/frps.ini"]
     networks:
       - frp-network
 

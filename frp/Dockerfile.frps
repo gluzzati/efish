@@ -7,7 +7,7 @@ COPY frps.ini /etc/frp/frps.ini
 RUN mkdir -p /var/log
 
 # Expose ports
-EXPOSE 7000 7001 7500
+EXPOSE 45413 45414 45415
 
 # Start FRP server
-CMD ["frps", "-c", "/etc/frp/frps.ini"] 
+CMD ["/usr/bin/frps", "-c", "/etc/frp/frps.ini"] 
