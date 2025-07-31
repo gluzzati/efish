@@ -1,0 +1,15 @@
+aiohappyeyeballs==2.6.1
+aiohttp==3.12.15
+aiosignal==1.4.0
+attrs==25.3.0
+cffi==1.17.1
+cryptography==45.0.5
+frozenlist==1.7.0
+idna==3.10
+multidict==6.6.3
+propcache==0.3.2
+pycparser==2.22
+pyjwt==2.10.1
+typing-extensions==4.14.1
+websockets==15.0.1
+yarl==1.20.1
