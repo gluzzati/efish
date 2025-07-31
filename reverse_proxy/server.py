@@ -116,7 +116,7 @@ async def http_proxy_handler(request):
     )
     
     if not response_data:
-        return web.Response(text="Tunnel not available", status=503)
+        raise web.HTTPNotFound()
     
     return web.Response(
         text=response_data.get("body", ""),
