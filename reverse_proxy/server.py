@@ -5,6 +5,8 @@ import uuid
 import websockets
 from aiohttp import web
 import logging
+import ssl
+import sys
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -134,13 +136,28 @@ async def main():
     
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 45415)
+    
+    # SSL configuration
+    ssl_context = None
+    if len(sys.argv) >= 3:
+        cert_file = sys.argv[1]
+        key_file = sys.argv[2]
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(cert_file, key_file)
+        logger.info(f"SSL enabled with cert: {cert_file}")
+    
+    if ssl_context:
+        site = web.TCPSite(runner, '0.0.0.0', 45415, ssl_context=ssl_context)
+        logger.info("Tunnel server started:")
+        logger.info("- WebSocket server on port 45413")
+        logger.info("- HTTPS proxy on port 45415")
+    else:
+        site = web.TCPSite(runner, '0.0.0.0', 45415)
+        logger.info("Tunnel server started:")
+        logger.info("- WebSocket server on port 45413")
+        logger.info("- HTTP proxy on port 45415")
+    
     await site.start()
-    
-    logger.info("Tunnel server started:")
-    logger.info("- WebSocket server on port 45413")
-    logger.info("- HTTP proxy on port 45415")
-    
     await asyncio.gather(websocket_server, asyncio.Event().wait())
 
 if __name__ == "__main__":
