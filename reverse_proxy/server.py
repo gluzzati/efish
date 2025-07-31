@@ -7,6 +7,7 @@ from aiohttp import web
 import logging
 import ssl
 import sys
+import os
 import jwt
 import time
 
@@ -186,7 +187,7 @@ async def main():
         JWT_SECRET = args[0]
         logger.info("JWT authentication enabled")
     else:
-        logger.error("JWT secret required. Usage: python server.py <jwt_secret> [cert.pem] [key.pem]")
+        logger.error("JWT secret required. Usage: python server.py <jwt_secret>")
         return
     
     websocket_server = websockets.serve(websocket_handler, "0.0.0.0", 45413)
@@ -198,14 +199,19 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     
-    # SSL configuration (optional)
+    # SSL configuration - check for certificates in /app/certs/
     ssl_context = None
-    if len(args) >= 3:
-        cert_file = args[1]
-        key_file = args[2]
-        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(cert_file, key_file)
-        logger.info(f"SSL enabled with cert: {cert_file}")
+    cert_file = "/app/certs/cert.pem"
+    key_file = "/app/certs/key.pem"
+    
+    if os.path.exists(cert_file) and os.path.exists(key_file):
+        try:
+            ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            ssl_context.load_cert_chain(cert_file, key_file)
+            logger.info(f"SSL enabled with cert: {cert_file}")
+        except Exception as e:
+            logger.error(f"Failed to load SSL certificates: {e}")
+            ssl_context = None
     
     if ssl_context:
         site = web.TCPSite(runner, '0.0.0.0', 45415, ssl_context=ssl_context)
