@@ -140,7 +140,7 @@ async def main():
     websocket_server = websockets.serve(
         websocket_handler, 
         "0.0.0.0", 
-        8765
+        45413
     )
     
     # Start HTTP server for proxy requests
@@ -149,13 +149,13 @@ async def main():
     
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    site = web.TCPSite(runner, '0.0.0.0', 45415)
     await site.start()
     
     logger.info("Tunnel server started:")
-    logger.info("- WebSocket server on port 8765")
-    logger.info("- HTTP proxy on port 8080")
-    logger.info("- Access tunnels at: http://yourserver.com:8080/{tunnel_id}/path")
+    logger.info("- WebSocket server on port 45413")
+    logger.info("- HTTP proxy on port 45415")
+    logger.info("- Access tunnels at: http://yourserver.com:45415/{tunnel_id}/path")
     
     # Keep servers running
     await asyncio.gather(
