@@ -116,7 +116,8 @@ async def http_proxy_handler(request):
     )
     
     if not response_data:
-        raise web.HTTPNotFound()
+        request.transport.close()
+        return web.Response()
     
     return web.Response(
         text=response_data.get("body", ""),
