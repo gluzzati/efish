@@ -183,6 +183,7 @@ async def main():
     
     # Start HTTP server for proxy requests
     app = web.Application()
+    app.router.add_route('*', '/{tunnel_id}', http_proxy_handler)
     app.router.add_route('*', '/{tunnel_id}/{path:.*}', http_proxy_handler)
     
     runner = web.AppRunner(app)
