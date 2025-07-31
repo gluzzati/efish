@@ -7,6 +7,8 @@ from aiohttp import web
 import logging
 import ssl
 import sys
+import jwt
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,6 +61,28 @@ class TunnelManager:
             if not future.done():
                 future.set_result(response_data)
 
+# Global JWT secret - should be set via environment variable in production
+JWT_SECRET = None
+
+def verify_token(token):
+    """Verify JWT token and return payload"""
+    try:
+        if not JWT_SECRET:
+            logger.error("JWT secret not configured")
+            return None
+        
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        
+        # Check if token is expired
+        if payload.get('exp') and payload.get('exp') < time.time():
+            logger.warning("Token expired")
+            return None
+            
+        return payload
+    except jwt.InvalidTokenError as e:
+        logger.error(f"Invalid token: {e}")
+        return None
+
 tunnel_manager = TunnelManager()
 
 async def websocket_handler(websocket):
@@ -68,7 +92,31 @@ async def websocket_handler(websocket):
         reg_data = json.loads(registration)
         
         if reg_data.get("type") == "register":
+            # Verify authentication token
+            token = reg_data.get("token")
+            if not token:
+                await websocket.send(json.dumps({
+                    "type": "error",
+                    "message": "Authentication token required"
+                }))
+                return
+            
+            payload = verify_token(token)
+            if not payload:
+                await websocket.send(json.dumps({
+                    "type": "error", 
+                    "message": "Invalid authentication token"
+                }))
+                return
+            
             tunnel_id = reg_data.get("tunnel_id")
+            if not tunnel_id:
+                await websocket.send(json.dumps({
+                    "type": "error",
+                    "message": "Tunnel ID required"
+                }))
+                return
+            
             await tunnel_manager.register_tunnel(tunnel_id, websocket)
             
             await websocket.send(json.dumps({
@@ -128,6 +176,19 @@ async def http_proxy_handler(request):
     )
 
 async def main():
+    global JWT_SECRET
+    
+    # Parse command line arguments
+    args = sys.argv[1:]
+    
+    # JWT secret (required for authentication)
+    if len(args) >= 1:
+        JWT_SECRET = args[0]
+        logger.info("JWT authentication enabled")
+    else:
+        logger.error("JWT secret required. Usage: python server.py <jwt_secret> [cert.pem] [key.pem]")
+        return
+    
     websocket_server = websockets.serve(websocket_handler, "0.0.0.0", 45413)
     
     app = web.Application()
@@ -137,11 +198,11 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     
-    # SSL configuration
+    # SSL configuration (optional)
     ssl_context = None
-    if len(sys.argv) >= 3:
-        cert_file = sys.argv[1]
-        key_file = sys.argv[2]
+    if len(args) >= 3:
+        cert_file = args[1]
+        key_file = args[2]
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(cert_file, key_file)
         logger.info(f"SSL enabled with cert: {cert_file}")

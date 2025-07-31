@@ -5,24 +5,35 @@ import websockets
 import aiohttp
 import logging
 import sys
+import jwt
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TunnelClient:
-    def __init__(self, server_url, tunnel_id, local_port):
+    def __init__(self, server_url, tunnel_id, local_port, jwt_secret):
         self.server_url = server_url
         self.tunnel_id = tunnel_id
         self.local_port = local_port
+        self.jwt_secret = jwt_secret
         self.websocket = None
         
     async def connect(self):
         try:
             self.websocket = await websockets.connect(self.server_url)
             
+            # Generate JWT token
+            payload = {
+                'tunnel_id': self.tunnel_id,
+                'exp': time.time() + 3600  # 1 hour expiry
+            }
+            token = jwt.encode(payload, self.jwt_secret, algorithm='HS256')
+            
             registration = {
                 "type": "register",
-                "tunnel_id": self.tunnel_id
+                "tunnel_id": self.tunnel_id,
+                "token": token
             }
             await self.websocket.send(json.dumps(registration))
             
@@ -32,6 +43,9 @@ class TunnelClient:
             if data.get("type") == "registered":
                 logger.info(f"Tunnel registered: {self.tunnel_id}")
                 return True
+            elif data.get("type") == "error":
+                logger.error(f"Registration failed: {data.get('message')}")
+                return False
             else:
                 logger.error("Registration failed")
                 return False
@@ -112,16 +126,17 @@ class TunnelClient:
                     await self.websocket.close()
 
 async def main():
-    if len(sys.argv) != 4:
-        print("Usage: python client.py <server_ws_url> <tunnel_id> <local_port>")
-        print("Example: python client.py ws://yourserver.com:45413 my_pc 8000")
+    if len(sys.argv) != 5:
+        print("Usage: python client.py <server_ws_url> <tunnel_id> <local_port> <jwt_secret>")
+        print("Example: python client.py ws://yourserver.com:45413 my_pc 8000 your_secret_key")
         return
     
     server_url = sys.argv[1]
     tunnel_id = sys.argv[2] 
     local_port = int(sys.argv[3])
+    jwt_secret = sys.argv[4]
     
-    client = TunnelClient(server_url, tunnel_id, local_port)
+    client = TunnelClient(server_url, tunnel_id, local_port, jwt_secret)
     await client.run()
 
 if __name__ == "__main__":
