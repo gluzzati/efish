@@ -203,7 +203,7 @@ async def main():
     ssl_context = None
     cert_file = "/app/certs/cert.pem"
     key_file = "/app/certs/key.pem"
-    
+    logger.info(f'cert file exists: {os.path.exists(cert_file)}')
     if os.path.exists(cert_file) and os.path.exists(key_file):
         try:
             ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
