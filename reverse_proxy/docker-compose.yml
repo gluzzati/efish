@@ -5,6 +5,8 @@ services:
     build: .
     container_name: reverse-proxy
     restart: unless-stopped
+    volumes:
+      - ./certs:/app/certs:ro
     environment:
       - JWT_SECRET=${JWT_SECRET:-your_default_secret_change_me}
       - LOG_LEVEL=INFO
