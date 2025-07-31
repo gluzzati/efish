@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  reverse-proxy:
+    build: .
+    container_name: reverse-proxy
+    restart: unless-stopped
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-your_default_secret_change_me}
+      - LOG_LEVEL=INFO
+    ports:
+      - "45413:45413"  # WebSocket tunnel
+      - "45415:45415"  # HTTP/HTTPS proxy
+    command: ["python", "server.py", "${JWT_SECRET:-your_default_secret_change_me}"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 45415), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
