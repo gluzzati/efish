@@ -17,24 +17,20 @@ class TunnelClient:
         self.websocket = None
         
     async def connect(self):
-        """Connect to the tunnel server"""
         try:
             self.websocket = await websockets.connect(self.server_url)
             
-            # Register tunnel
             registration = {
                 "type": "register",
                 "tunnel_id": self.tunnel_id
             }
             await self.websocket.send(json.dumps(registration))
             
-            # Wait for confirmation
             response = await self.websocket.recv()
             data = json.loads(response)
             
             if data.get("type") == "registered":
-                logger.info(f"Tunnel registered successfully: {self.tunnel_id}")
-                logger.info(f"Public URL: http://yourserver.com:8080/{self.tunnel_id}/")
+                logger.info(f"Tunnel registered: {self.tunnel_id}")
                 return True
             else:
                 logger.error("Registration failed")
@@ -45,7 +41,6 @@ class TunnelClient:
             return False
     
     async def forward_to_local(self, request_data):
-        """Forward request to local service and return response"""
         try:
             local_url = f"http://localhost:{self.local_port}{request_data['path']}"
             
@@ -78,17 +73,13 @@ class TunnelClient:
             }
     
     async def handle_requests(self):
-        """Handle incoming requests from tunnel server"""
         try:
             async for message in self.websocket:
                 try:
                     data = json.loads(message)
                     
                     if data.get("type") == "http_request":
-                        # Forward to local service
                         response = await self.forward_to_local(data)
-                        
-                        # Send response back through tunnel
                         await self.websocket.send(json.dumps(response))
                         
                 except json.JSONDecodeError:
@@ -102,7 +93,6 @@ class TunnelClient:
             logger.error(f"Connection error: {e}")
     
     async def run(self):
-        """Main client loop with reconnection"""
         while True:
             try:
                 if await self.connect():
@@ -123,8 +113,8 @@ class TunnelClient:
 
 async def main():
     if len(sys.argv) != 4:
-        print("Usage: python private_client.py <server_ws_url> <tunnel_id> <local_port>")
-        print("Example: python private_client.py ws://yourserver.com:8765 my_pc 8000")
+        print("Usage: python client.py <server_ws_url> <tunnel_id> <local_port>")
+        print("Example: python client.py ws://yourserver.com:45413 my_pc 8000")
         return
     
     server_url = sys.argv[1]
