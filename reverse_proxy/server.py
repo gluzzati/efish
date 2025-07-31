@@ -73,7 +73,7 @@ class TunnelManager:
 # Global tunnel manager
 tunnel_manager = TunnelManager()
 
-async def websocket_handler(websocket, path):
+async def websocket_handler(websocket):
     """Handle WebSocket connections from private clients"""
     tunnel_id = None
     try:
