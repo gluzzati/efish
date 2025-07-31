@@ -5,6 +5,7 @@ import uuid
 import websockets
 from aiohttp import web, ClientSession
 import logging
+import os.path
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ async def websocket_handler(websocket):
         if tunnel_id:
             await tunnel_manager.unregister_tunnel(tunnel_id)
 
+
 async def http_proxy_handler(request):
     """Handle HTTP requests and proxy through tunnels"""
     tunnel_id = request.match_info.get('tunnel_id')
@@ -113,14 +115,50 @@ async def http_proxy_handler(request):
     if not tunnel_id:
         return web.Response(text="Tunnel ID required", status=400)
     
+    # Extract the path after the tunnel_id
+    original_path = request.path_qs
+    tunnel_prefix = f"/{tunnel_id}"
+    
+    if original_path.startswith(tunnel_prefix):
+        # Remove tunnel prefix to get the actual path for the local service
+        local_path = original_path[len(tunnel_prefix):]
+        if not local_path:
+            local_path = "/"  # Default to root if empty
+            
+        # SECURITY: Sanitize path to prevent traversal attacks
+        # Remove query string temporarily for path validation
+        path_only = local_path.split('?')[0]
+        
+        # Normalize path and check for traversal attempts
+        normalized = os.path.normpath(path_only)
+        if normalized.startswith('../') or '/../' in normalized or normalized == '..':
+            logger.warning(f"Path traversal attempt blocked: {path_only}")
+            return web.Response(text="Path traversal not allowed", status=403)
+        
+        # Restore query string if it existed
+        if '?' in local_path:
+            query_part = local_path[local_path.index('?'):]
+            local_path = normalized + query_part
+        else:
+            local_path = normalized
+            
+        # Ensure path starts with /
+        if not local_path.startswith('/'):
+            local_path = '/' + local_path
+            
+    else:
+        local_path = "/"
+    
     # Read request body
     body = await request.read()
+    
+    logger.info(f"Proxying {request.method} {original_path} -> localhost:{tunnel_id} {local_path}")
     
     # Forward through tunnel
     response_data = await tunnel_manager.forward_request(
         tunnel_id=tunnel_id,
         method=request.method,
-        path=request.path_qs,
+        path=local_path,
         headers=request.headers,
         body=body
     )
